@@ -1,0 +1,83 @@
+# Daily AI Supervisor — configuration.
+# Secrets do NOT belong here. API keys live in .env (see .env.example).
+
+# Global kill-switch for every outbound side effect (Gmail labels, greeting
+# sends, digest send). Classification and reporting still run.
+# Leave true until you have reviewed a few days of dry-run reports.
+dry_run: true
+
+scheduler:
+  timezone: "Asia/Kolkata"
+  daily_run_time: "09:00"
+
+database:
+  # Swap for a postgresql+psycopg:// URL to move off SQLite. No code change.
+  url: "sqlite:///data/automation.db"
+
+google:
+  credentials_file: "credentials.json"
+  token_file: "data/token.json"
+
+gmail:
+  enabled: true
+  # Lookback used on every run after the first.
+  lookback_minutes: 1440
+  # Lookback used only when there is no previous successful Gmail run.
+  first_run_lookback_days: 7
+  # Hard ceiling on messages classified in one run (cost guard).
+  max_emails_per_run: 200
+  delete_label: "ToDelete"
+  auto_label_threshold: 0.95
+  # Categories that may ever receive the ToDelete label. Anything else is
+  # refused by the policy engine regardless of confidence.
+  auto_label_allowed_categories:
+    - NEWSLETTER
+    - PROMOTION
+    - SOCIAL
+  # Substrings matched against the From header (case-insensitive). A match
+  # vetoes every automated action on that message.
+  protected_senders:
+    - "@mybank.example"
+  # Gmail search fragment appended to every query. Keeps the agent out of
+  # Spam/Trash and off already-triaged mail.
+  base_query: "-in:spam -in:trash -label:ToDelete"
+
+occasion:
+  enabled: true
+  # Google Drive file ID of the contacts .xlsx (from the file's share URL).
+  drive_file_id: ""
+  worksheet: "Contacts"
+  send_enabled: true
+  birthday_enabled: true
+  anniversary_enabled: true
+  # REQUIRED before any greeting can be sent. Signs off the greeting emails.
+  sender_name: ""
+
+notifications:
+  enabled: true
+  channel: "email"
+  # Blank means "send the digest to the authenticated Gmail account itself".
+  recipient: ""
+
+ai:
+  classification_model: "claude-opus-5"
+  content_model: "claude-opus-5"
+  image_model: "gemini-2.5-flash-image"
+  # Emails are classified in batches of this size in a single request.
+  classification_batch_size: 10
+  # Email bodies are truncated to this many characters before being sent to
+  # the model (cost guard + prompt-injection surface reduction).
+  max_body_chars: 4000
+  # Gemini image sizing: aspect ratio plus a size tier (1K / 2K / 4K).
+  image_aspect_ratio: "1:1"
+  image_size: "1K"
+
+retry:
+  max_attempts: 3
+  backoff_seconds: [30, 120, 300]
+  agent_timeout_seconds: 1800
+
+logging:
+  level: "INFO"
+  # Structured JSON log file. Email bodies are never written here.
+  file: "data/logs/automation.jsonl"

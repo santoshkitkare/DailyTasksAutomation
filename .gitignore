@@ -1,0 +1,31 @@
+# Secrets & credentials — NEVER commit
+.env
+credentials.json
+token.json
+token.json.enc
+*.key
+token_key.bin
+
+# Runtime data
+data/*
+!data/.gitkeep
+*.db
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/
