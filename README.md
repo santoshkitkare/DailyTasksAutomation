@@ -133,6 +133,25 @@ python -m daily_ai_automation.main report last
 
 Reports are written to `data/reports/` regardless of whether the email is sent.
 
+### Dashboard
+
+```bash
+python -m daily_ai_automation.main dashboard
+```
+
+Opens a local web app at `http://127.0.0.1:8787` with three views:
+
+- **Runs** — every past run, browsable, instead of one HTML file per day.
+- **Open Actions** — job opportunities and reply-required emails across *every*
+  run, not just the latest one, each with **Mark done** / **Dismiss**. This is
+  local bookkeeping only — it never writes to Gmail or sends anything; it just
+  tracks that you've handled something yourself.
+- **Analytics** — trends over time: emails processed, job opportunities,
+  greetings sent, and estimated AI cost per model per day.
+
+Localhost only by design, and there is no login — don't pass `--host` to
+anything other than `127.0.0.1` unless you've added authentication first.
+
 ### Going live
 
 1. Run in dry-run mode for two or three days.
@@ -210,12 +229,17 @@ daily_ai_automation/
 ├── agents/          the two workers; they propose, they do not execute
 ├── integrations/    the only code that talks to Gmail, Drive, Claude, Gemini
 ├── repositories/    data access; owns the idempotency guarantees
-├── reporting/       digest rendering and delivery
+├── reporting/       digest rendering, delivery, and JSON -> RunReport reconstruction
+├── dashboard/       local read-mostly web app (FastAPI + Jinja2); see above
 └── prompts/         versioned system prompts
 ```
 
 **Structural rule:** worker code never calls a `GmailClient` write method
-directly. It asks `supervisor/policies.py` for a verdict and acts on that.
+directly. It asks `supervisor/policies.py` for a verdict and acts on that. The
+dashboard mutates exactly one thing - an action item's local done/dismissed
+status - and cannot reach Gmail, Drive, or either model API at all; it only
+holds a `Settings` and a `sessionmaker`, not the credentials or clients the
+agents use.
 
 ---
 

@@ -1,7 +1,7 @@
 """Data-access layer. Owns the idempotency guarantees."""
 
 from .audit_repository import AuditRepository
-from .email_repository import EmailRepository
+from .email_repository import EmailRepository, UnknownMessageError
 from .occasion_repository import DuplicateSendError, OccasionRepository
 from .run_repository import RunRepository
 
@@ -11,4 +11,5 @@ __all__ = [
     "EmailRepository",
     "OccasionRepository",
     "RunRepository",
+    "UnknownMessageError",
 ]

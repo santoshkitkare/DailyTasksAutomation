@@ -159,6 +159,9 @@ class GmailTriageAgent(DailyAgent):
                 "notify": [e.model_dump(mode="json") for e in notify],
                 "counts": self._counts(triaged),
                 "token_usage": self.llm.usage.as_dict(),
+                # Recorded so analytics can price historical runs correctly
+                # even after the configured model changes later.
+                "model": self.settings.ai.classification_model,
             },
         )
 

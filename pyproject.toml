@@ -21,6 +21,10 @@ dependencies = [
     "python-dotenv>=1.0",
     "cryptography>=43.0",
     "tzdata>=2024.1",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
@@ -41,7 +45,7 @@ build-backend = "setuptools.build_meta"
 include = ["daily_ai_automation*"]
 
 [tool.setuptools.package-data]
-daily_ai_automation = ["prompts/*.md"]
+daily_ai_automation = ["prompts/*.md", "dashboard/templates/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

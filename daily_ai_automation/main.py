@@ -5,6 +5,7 @@
     daily-automation run       execute the daily supervisor cycle
     daily-automation history   list recent runs
     daily-automation report    re-render a past run's report
+    daily-automation dashboard launch the local web dashboard
 """
 
 from __future__ import annotations
@@ -260,9 +261,7 @@ def report(
     from .db import session_scope
     from .repositories import RunRepository
     from .reporting.digest import render
-    from .supervisor.supervisor import RunReport
-    from .contracts import AgentResult
-    from .supervisor.state_manager import TaskState
+    from .reporting.reconstruct import rebuild_run_report
 
     application = build_application(config, configure_logs=False)
     with session_scope(application.session_factory) as session:
@@ -279,24 +278,36 @@ def report(
                 else f"[red]No run with ID {run_id}[/red]"
             )
             raise typer.Exit(code=1)
-        payload = row.summary_json or {}
+        rebuilt = rebuild_run_report(row)
 
-    rebuilt = RunReport(
-        run_id=payload.get("run_id", row.id),
-        run_date=payload.get("run_date", row.run_date.isoformat()),
-        dry_run=payload.get("dry_run", row.dry_run),
-        status=payload.get("status", row.status),
-        results={
-            name: AgentResult.model_validate(value)
-            for name, value in payload.get("results", {}).items()
-        },
-        states={
-            name: TaskState(value)
-            for name, value in payload.get("states", {}).items()
-        },
-        errors=payload.get("errors", []),
-    )
     console.print(render(rebuilt).text)
+
+
+@app.command()
+def dashboard(
+    config: ConfigOption = None,
+    host: Annotated[
+        str, typer.Option(help="Bind address. Localhost only unless you know why not.")
+    ] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Port to serve on.")] = 8787,
+) -> None:
+    """Launch the local web dashboard: run history, open actions, analytics.
+
+    Read-only against the automation database except for marking an action
+    item done or dismissed, which never writes to Gmail. There is no
+    authentication - keep --host at 127.0.0.1 unless this machine's network
+    exposure has been thought through.
+    """
+    import uvicorn
+
+    from .dashboard import create_app
+
+    application = build_application(config, configure_logs=True)
+    web_app = create_app(application.settings, application.session_factory)
+
+    console.print(f"Dashboard running at [bold]http://{host}:{port}[/bold]")
+    console.print("[dim]Press Ctrl+C to stop.[/dim]")
+    uvicorn.run(web_app, host=host, port=port, log_level="warning")
 
 
 def _status_line(status: str) -> str:

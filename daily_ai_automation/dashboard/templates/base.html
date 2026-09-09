@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Daily AI Supervisor{% endblock %}</title>
+  <style>
+    :root {
+      --green: #1a7f37; --amber: #9a6700; --red: #cf222e; --gray: #57606a;
+      --blue: #0969da; --border: #d0d7de; --bg-subtle: #f6f8fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Segoe UI, Helvetica, Arial, sans-serif;
+      font-size: 14px; line-height: 1.55; color: #1f2328;
+      margin: 0; background: #fff;
+    }
+    header {
+      border-bottom: 1px solid var(--border); padding: 14px 24px;
+      display: flex; align-items: center; gap: 24px;
+    }
+    header h1 { font-size: 16px; margin: 0; }
+    header nav a {
+      color: var(--gray); text-decoration: none; margin-right: 4px;
+      padding: 6px 10px; border-radius: 6px; font-size: 13px;
+    }
+    header nav a.active { background: var(--bg-subtle); color: #1f2328; font-weight: 600; }
+    header nav a:hover { background: var(--bg-subtle); }
+    main { max-width: 960px; margin: 0 auto; padding: 24px; }
+    h2 { font-size: 15px; margin: 24px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+    table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+    th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    th { color: var(--gray); font-weight: 600; }
+    tr:hover td { background: var(--bg-subtle); }
+    a { color: var(--blue); }
+    .status { font-weight: 600; }
+    .status-COMPLETED { color: var(--green); }
+    .status-PARTIAL_SUCCESS { color: var(--amber); }
+    .status-FAILED { color: var(--red); }
+    .status-TIMEOUT { color: var(--red); }
+    .status-CANCELLED { color: var(--red); }
+    .pill {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; background: var(--bg-subtle); color: var(--gray);
+    }
+    .pill-dry { background: #fff8c5; color: #7d5b00; }
+    .card {
+      border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .muted { color: var(--gray); }
+    .empty { color: var(--gray); padding: 24px 0; }
+    form.inline { display: inline; }
+    button {
+      font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+      border: 1px solid var(--border); background: #fff;
+    }
+    button.done { border-color: var(--green); color: var(--green); }
+    button.done:hover { background: #dafbe1; }
+    button.dismiss { border-color: var(--gray); color: var(--gray); }
+    button.dismiss:hover { background: var(--bg-subtle); }
+    .flash {
+      background: #dafbe1; border: 1px solid var(--green); color: #044a1c;
+      padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; font-size: 13px;
+    }
+    .stat-row { display: flex; gap: 24px; margin: 12px 0 20px; flex-wrap: wrap; }
+    .stat { min-width: 120px; }
+    .stat .value { font-size: 22px; font-weight: 700; }
+    .stat .label { color: var(--gray); font-size: 12px; }
+    pre.reply {
+      white-space: pre-wrap; background: var(--bg-subtle); padding: 10px;
+      border-radius: 6px; font-family: inherit; font-size: 13px; margin: 8px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Daily AI Supervisor</h1>
+    <nav>
+      <a href="/runs" class="{{ 'active' if active == 'runs' else '' }}">Runs</a>
+      <a href="/actions" class="{{ 'active' if active == 'actions' else '' }}">Open Actions{% if open_action_count %} ({{ open_action_count }}){% endif %}</a>
+      <a href="/analytics" class="{{ 'active' if active == 'analytics' else '' }}">Analytics</a>
+    </nav>
+  </header>
+  <main>
+    {% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

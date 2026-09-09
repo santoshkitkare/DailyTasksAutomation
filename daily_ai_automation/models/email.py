@@ -37,3 +37,16 @@ class EmailProcessing(Base):
     processed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
     )
+
+    # Carried over from EmailClassification so the dashboard's cross-run open
+    # actions view can render a card without depending on a run's summary_json
+    # blob. Still no full email body - only what the model already summarised.
+    why_it_matters: Mapped[str] = mapped_column(Text, default="")
+    suggested_deadline: Mapped[str] = mapped_column(String(128), default="")
+    suggested_reply: Mapped[str] = mapped_column(Text, default="")
+
+    # User-driven completion tracking for the dashboard (PENDING/DONE/DISMISSED).
+    # Deliberately local-only: marking an item done never touches Gmail.
+    user_action_status: Mapped[str] = mapped_column(String(16), default="PENDING")
+    user_action_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    user_action_note: Mapped[str] = mapped_column(Text, default="")

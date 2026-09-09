@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}{{ report.run_date }} — Daily AI Supervisor{% endblock %}
+{% block content %}
+<p><a href="/runs">&larr; All runs</a></p>
+<h2 style="border:none;margin-bottom:2px;">{{ report.run_date }}</h2>
+<p class="muted" style="margin-top:0;">
+  <span class="status status-{{ report.status }}">{{ report.status.replace('_', ' ') }}</span>
+  &middot; <code>{{ report.run_id }}</code>
+  {% if report.dry_run %} &middot; <span class="pill pill-dry">dry run</span>{% endif %}
+</p>
+
+{% set gmail = report.results.get('gmail_triage_agent') %}
+{% set occasion = report.results.get('occasion_agent') %}
+
+<h2>Gmail</h2>
+{% if gmail %}
+{% set counts = gmail.details.get('counts', {}) %}
+<div class="stat-row">
+  <div class="stat"><div class="value">{{ counts.get('processed', gmail.items_processed) }}</div><div class="label">Processed</div></div>
+  <div class="stat"><div class="value">{{ counts.get('job_opportunities', 0) }}</div><div class="label">Job / recruiter</div></div>
+  <div class="stat"><div class="value">{{ counts.get('requires_reply', 0) }}</div><div class="label">Needs reply</div></div>
+  <div class="stat"><div class="value">{{ counts.get('would_label', 0) if report.dry_run else counts.get('labeled', 0) }}</div>
+    <div class="label">{{ 'Would label' if report.dry_run else 'Labeled' }} ToDelete</div></div>
+</div>
+{% if emails %}
+<table>
+  <thead><tr><th>Subject</th><th>Sender</th><th>Category</th><th>Priority</th><th>Conf.</th><th>Applied</th></tr></thead>
+  <tbody>
+    {% for e in emails %}
+    <tr>
+      <td><a href="https://mail.google.com/mail/u/0/#inbox/{{ e.thread_id }}" target="_blank" rel="noopener">{{ e.subject }}</a></td>
+      <td class="muted">{{ e.sender }}</td>
+      <td>{{ e.category.replace('_', ' ').title() }}</td>
+      <td>{{ e.priority }}</td>
+      <td>{{ '%.2f'|format(e.confidence) }}</td>
+      <td class="muted">{{ e.action_applied }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% else %}
+<p class="empty">{{ 'Disabled in configuration.' if report.states.get('gmail_triage_agent') == 'SKIPPED' else 'Did not run.' }}</p>
+{% endif %}
+
+{% if actionable_emails %}
+<h2>Action items from this run</h2>
+{% for e in actionable_emails %}
+  {{ macros.action_card(e, "/runs/" ~ report.run_id) }}
+{% endfor %}
+{% endif %}
+
+<h2>Occasions</h2>
+{% if occasion %}
+<div class="stat-row">
+  <div class="stat"><div class="value">{{ occasions | selectattr('status', 'equalto', 'SENT') | list | length }}</div><div class="label">Sent</div></div>
+  <div class="stat"><div class="value">{{ occasion.details.get('invalid_rows', []) | length }}</div><div class="label">Invalid rows</div></div>
+</div>
+{% if occasions %}
+<table>
+  <thead><tr><th>Event</th><th>Recipient</th><th>Status</th><th>Sent at</th></tr></thead>
+  <tbody>
+    {% for o in occasions %}
+    <tr>
+      <td>{{ o.event_type }}</td>
+      <td>{{ o.recipient_name }} &lt;{{ o.recipient_email }}&gt;</td>
+      <td>{{ o.status }}</td>
+      <td class="muted">{{ o.sent_at.strftime('%Y-%m-%d %H:%M') if o.sent_at else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% if occasion.details.get('invalid_rows') %}
+<p class="muted" style="margin-top:8px;">Invalid contact rows:</p>
+<ul>
+  {% for row in occasion.details.get('invalid_rows', []) %}
+  <li>Row {{ row.row_number }}: {{ row.reason }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% else %}
+<p class="empty">{{ 'Disabled in configuration.' if report.states.get('occasion_agent') == 'SKIPPED' else 'Did not run.' }}</p>
+{% endif %}
+
+<h2>Errors &amp; warnings</h2>
+{% set all_warnings = report.errors + (gmail.warnings if gmail else []) + (occasion.warnings if occasion else []) %}
+{% if all_warnings %}
+<ul>{% for w in all_warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+{% else %}
+<p class="empty">None.</p>
+{% endif %}
+
+{% if audit_entries %}
+<h2>Audit trail</h2>
+<table>
+  <thead><tr><th>Action</th><th>Resource</th><th>Outcome</th><th>Reason</th><th>Confidence</th></tr></thead>
+  <tbody>
+    {% for a in audit_entries %}
+    <tr>
+      <td>{{ a.action }}</td>
+      <td class="muted">{{ a.resource_id }}</td>
+      <td>{{ a.outcome }}</td>
+      <td class="muted">{{ a.reason }}</td>
+      <td>{{ '%.2f'|format(a.confidence) if a.confidence is not none else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

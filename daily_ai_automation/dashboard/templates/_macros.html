@@ -1,0 +1,44 @@
+{% macro priority_marker(priority) -%}
+  {%- if priority == 'CRITICAL' -%}🚨{%- elif priority == 'HIGH' -%}🔴{%- elif priority == 'MEDIUM' -%}🟡{%- else -%}⚪{%- endif -%}
+{%- endmacro %}
+
+{% macro action_card(email, redirect_to, show_run_link=False) %}
+<div class="card" id="email-{{ email.message_id }}">
+  <p style="margin:0 0 2px;font-weight:600;">
+    {{ priority_marker(email.priority) }} {{ email.priority }}
+    &middot; {{ email.category.replace('_', ' ').title() }}
+  </p>
+  <p style="margin:0 0 2px;">{{ email.subject }}</p>
+  <p style="margin:0 0 8px;" class="muted">From: {{ email.sender }}</p>
+  {% if email.summary %}<p style="margin:0;">{{ email.summary }}</p>{% endif %}
+  {% if email.why_it_matters %}<p style="margin:6px 0 0;" class="muted">{{ email.why_it_matters }}</p>{% endif %}
+  {% if email.suggested_deadline %}<p style="margin:6px 0 0;" class="muted">Deadline: {{ email.suggested_deadline }}</p>{% endif %}
+  <p style="margin:8px 0 0;">
+    <a href="https://mail.google.com/mail/u/0/#inbox/{{ email.thread_id }}" target="_blank" rel="noopener">Open in Gmail</a>
+    {% if show_run_link %} &middot; <a href="/runs/{{ email.run_id }}">view run</a>{% endif %}
+  </p>
+  {% if email.suggested_reply %}
+  <details style="margin-top:10px;">
+    <summary style="cursor:pointer;color:var(--blue);">Suggested reply</summary>
+    <pre class="reply">{{ email.suggested_reply }}</pre>
+  </details>
+  {% endif %}
+
+  {% if email.user_action_status == 'PENDING' %}
+  <div style="margin-top:10px;">
+    <form class="inline" method="post" action="/actions/{{ email.message_id }}/mark">
+      <input type="hidden" name="status" value="DONE">
+      <input type="hidden" name="redirect_to" value="{{ redirect_to }}">
+      <button type="submit" class="done">Mark done</button>
+    </form>
+    <form class="inline" method="post" action="/actions/{{ email.message_id }}/mark">
+      <input type="hidden" name="status" value="DISMISSED">
+      <input type="hidden" name="redirect_to" value="{{ redirect_to }}">
+      <button type="submit" class="dismiss">Dismiss</button>
+    </form>
+  </div>
+  {% else %}
+  <p style="margin-top:10px;" class="pill">{{ email.user_action_status.title() }}{% if email.user_action_at %} — {{ email.user_action_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}</p>
+  {% endif %}
+</div>
+{% endmacro %}

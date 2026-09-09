@@ -8,7 +8,18 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..contracts import TriagedEmail
-from ..models import EmailProcessing
+from ..models import EmailProcessing, utcnow
+
+#: Same predicate as reporting/digest.py's Action Required section
+#: (`_action_items`), so the dashboard's "open actions" list and the emailed
+#: digest never disagree about what counts as actionable.
+ACTIONABLE_CATEGORIES = ("JOB_OPPORTUNITY", "RECRUITER")
+
+USER_ACTION_STATUSES = ("PENDING", "DONE", "DISMISSED")
+
+
+class UnknownMessageError(LookupError):
+    """No email_processing row exists for the given message_id."""
 
 
 class EmailRepository:
@@ -51,6 +62,9 @@ class EmailRepository:
         row.recommended_action = str(classification.recommended_action)
         row.action_applied = email.action_applied
         row.action_reason = email.action_reason
+        row.why_it_matters = classification.why_it_matters
+        row.suggested_deadline = classification.suggested_deadline
+        row.suggested_reply = classification.suggested_reply
         self.session.flush()
         return row
 
@@ -62,3 +76,57 @@ class EmailRepository:
     def for_run(self, run_id: str) -> list[EmailProcessing]:
         stmt = select(EmailProcessing).where(EmailProcessing.run_id == run_id)
         return list(self.session.scalars(stmt))
+
+    # -- action tracking (dashboard) ---------------------------------------
+
+    def open_actions(self, limit: int = 200) -> list[EmailProcessing]:
+        """Actionable emails across every run that are still PENDING.
+
+        Cross-run by design: a reply-required email from three days ago must
+        not disappear just because a later day's report has since been read.
+        Ordered most urgent first (CRITICAL/HIGH priority, most recent).
+        """
+        priority_rank = {
+            "CRITICAL": 0,
+            "HIGH": 1,
+            "MEDIUM": 2,
+            "LOW": 3,
+            "NONE": 4,
+        }
+        stmt = select(EmailProcessing).where(
+            EmailProcessing.user_action_status == "PENDING",
+            (EmailProcessing.requires_reply.is_(True))
+            | (EmailProcessing.category.in_(ACTIONABLE_CATEGORIES)),
+        )
+        rows = list(self.session.scalars(stmt))
+        rows.sort(
+            key=lambda r: (
+                priority_rank.get(r.priority, 9),
+                -(r.received_at.timestamp() if r.received_at else 0),
+            )
+        )
+        return rows[:limit]
+
+    def mark_action(
+        self, message_id: str, status: str, *, note: str = ""
+    ) -> EmailProcessing:
+        """Record that the user has handled (or dismissed) an action item.
+
+        Purely local bookkeeping - this never writes to Gmail. Sending or
+        drafting a reply from the dashboard is a separate, larger decision
+        that reopens the human-in-the-loop boundary and is out of scope here.
+        """
+        if status not in USER_ACTION_STATUSES:
+            raise ValueError(
+                f"status must be one of {USER_ACTION_STATUSES}, got {status!r}"
+            )
+        row = self.session.get(EmailProcessing, message_id)
+        if row is None:
+            raise UnknownMessageError(
+                f"No email_processing row for message_id={message_id!r}"
+            )
+        row.user_action_status = status
+        row.user_action_at = utcnow()
+        row.user_action_note = note
+        self.session.flush()
+        return row

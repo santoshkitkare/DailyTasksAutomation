@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}Open Actions — Daily AI Supervisor{% endblock %}
+{% block content %}
+<h2>Open actions</h2>
+<p class="muted">
+  Job opportunities and reply-required emails across every run, not just the
+  latest one. Marking something here never touches Gmail — it only tracks that
+  you've handled it yourself.
+</p>
+{% if actions %}
+{% for email in actions %}
+  {{ macros.action_card(email, "/actions", show_run_link=True) }}
+{% endfor %}
+{% else %}
+<p class="empty">Nothing open. Every job opportunity and reply-required email has been marked done or dismissed.</p>
+{% endif %}
+{% endblock %}

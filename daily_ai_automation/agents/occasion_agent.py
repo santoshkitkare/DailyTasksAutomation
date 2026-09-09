@@ -396,6 +396,7 @@ class OccasionAgent(DailyAgent):
             "contacts_total": parsed.total_rows,
             "contacts_valid": len(parsed.contacts),
             "token_usage": self.llm.usage.as_dict() if self._llm else {},
+            "model": self.settings.ai.content_model,
         }
 
     @staticmethod

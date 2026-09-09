@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Analytics — Daily AI Supervisor{% endblock %}
+{% block content %}
+<h2>Analytics — last {{ summary.total_runs }} run(s)</h2>
+
+<div class="stat-row">
+  <div class="stat"><div class="value">{{ summary.total_runs }}</div><div class="label">Runs</div></div>
+  <div class="stat"><div class="value">{{ summary.total_emails_processed }}</div><div class="label">Emails processed</div></div>
+  <div class="stat"><div class="value">{{ summary.total_job_opportunities }}</div><div class="label">Job opportunities</div></div>
+  <div class="stat"><div class="value">{{ summary.total_greetings_sent }}</div><div class="label">Greetings sent</div></div>
+  <div class="stat">
+    <div class="value">${{ '%.2f'|format(summary.total_estimated_cost_usd) }}{% if summary.any_unpriced_model %}+{% endif %}</div>
+    <div class="label">Est. AI cost</div>
+  </div>
+</div>
+{% if summary.any_unpriced_model %}
+<p class="muted">
+  Some runs used a model not in the pricing table (or predate cost tracking),
+  so the total above is a floor, not the full figure — marked with "+".
+</p>
+{% endif %}
+
+{% if summary.days %}
+<table>
+  <thead>
+    <tr>
+      <th>Date</th><th>Status</th><th>Emails</th><th>Job opps</th>
+      <th>Labeled</th><th>Greetings</th><th>Duplicates</th><th>Tokens (in/out)</th><th>Est. cost</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in summary.days %}
+    <tr>
+      <td>{{ d.run_date }}{% if d.dry_run %} <span class="pill pill-dry">dry</span>{% endif %}</td>
+      <td class="status status-{{ d.status }}">{{ d.status.replace('_', ' ') }}</td>
+      <td>{{ d.emails_processed }}</td>
+      <td>{{ d.job_opportunities }}</td>
+      <td>{{ d.labeled }}</td>
+      <td>{{ d.greetings_sent }}</td>
+      <td>{{ d.duplicates_skipped }}</td>
+      <td class="muted">{{ d.input_tokens }} / {{ d.output_tokens }}</td>
+      <td>{% if d.estimated_cost_usd is not none %}${{ '%.3f'|format(d.estimated_cost_usd) }}{% if d.has_unpriced_model %}+{% endif %}{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No runs yet.</p>
+{% endif %}
+{% endblock %}

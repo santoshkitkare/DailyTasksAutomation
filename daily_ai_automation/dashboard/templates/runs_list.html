@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Runs — Daily AI Supervisor{% endblock %}
+{% block content %}
+<h2>Runs</h2>
+{% if runs %}
+<table>
+  <thead>
+    <tr><th>Date</th><th>Run ID</th><th>Status</th><th>Mode</th><th>Summary</th></tr>
+  </thead>
+  <tbody>
+    {% for run in runs %}
+    <tr>
+      <td>{{ run.run_date.isoformat() }}</td>
+      <td><a href="/runs/{{ run.id }}">{{ run.id }}</a></td>
+      <td class="status status-{{ run.status }}">{{ run.status.replace('_', ' ') }}</td>
+      <td>{% if run.dry_run %}<span class="pill pill-dry">dry run</span>{% else %}<span class="pill">live</span>{% endif %}</td>
+      <td class="muted">{{ run.summary or '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No runs recorded yet. Run <code>daily-automation run</code> to produce the first one.</p>
+{% endif %}
+{% endblock %}

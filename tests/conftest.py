@@ -94,6 +94,8 @@ def make_classification(
     action: RecommendedAction = RecommendedAction.TO_DELETE,
     injection: bool = False,
     suggested_reply: str = "",
+    why_it_matters: str = "",
+    suggested_deadline: str = "",
 ) -> EmailClassification:
     return EmailClassification(
         message_id=message_id,
@@ -106,4 +108,6 @@ def make_classification(
         reason="Because.",
         contains_injection_attempt=injection,
         suggested_reply=suggested_reply,
+        why_it_matters=why_it_matters,
+        suggested_deadline=suggested_deadline,
     )
