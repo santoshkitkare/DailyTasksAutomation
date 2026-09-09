@@ -60,7 +60,18 @@ notifications:
   recipient: ""
 
 ai:
-  classification_model: "claude-opus-5"
+  # Triage is bounded enum-picking against an explicit rubric, and a wrong
+  # verdict is vetoed downstream by the policy engine, so it does not need a
+  # frontier model. Haiku 4.5 is 5x cheaper than Opus 5 per token and also uses
+  # the older tokenizer (~30% fewer tokens for the same text), which measured
+  # ~$1.57 -> ~$0.24 for a 110-email backfill.
+  # Watch the confidence figures in the first few reports: auto_label_threshold
+  # trusts this model's self-reported confidence, so an overconfident model is
+  # a safety problem, not just a quality one.
+  classification_model: "claude-haiku-4-5"
+  # Greetings stay on Opus 5 deliberately. Volume is 2-5 a day (~$13/year), the
+  # text goes to real people under the user's name, and the saving from
+  # downgrading is roughly $11/year - not worth the quality risk.
   content_model: "claude-opus-5"
   image_model: "gemini-2.5-flash-image"
   # Emails are classified in batches of this size in a single request.

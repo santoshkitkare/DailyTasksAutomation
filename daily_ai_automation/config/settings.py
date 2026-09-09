@@ -213,6 +213,8 @@ def load_settings(
         raise ValueError(f"{path} must contain a YAML mapping at the top level")
 
     load_dotenv(root / ".env", override=False)
+    _apply_env_overrides(raw)
+
     raw["secrets"] = {
         "anthropic_api_key": os.getenv("ANTHROPIC_API_KEY", ""),
         "gemini_api_key": os.getenv("GEMINI_API_KEY", ""),
@@ -220,6 +222,67 @@ def load_settings(
     }
     raw["project_root"] = root
     return Settings.model_validate(raw)
+
+
+#: Operator-specific settings, overridable from .env so config.yaml can stay a
+#: committable template. Each entry maps an environment variable to the nested
+#: config path it replaces, plus how to parse it.
+#: (env var, (section, key), parser)
+ENV_OVERRIDES: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    ("DAILY_DRY_RUN", ("dry_run",), "bool"),
+    ("DAILY_DRIVE_FILE_ID", ("occasion", "drive_file_id"), "str"),
+    ("DAILY_SENDER_NAME", ("occasion", "sender_name"), "str"),
+    ("DAILY_NOTIFY_RECIPIENT", ("notifications", "recipient"), "str"),
+    ("DAILY_PROTECTED_SENDERS", ("gmail", "protected_senders"), "csv"),
+    ("DAILY_TIMEZONE", ("scheduler", "timezone"), "str"),
+    ("DAILY_DATABASE_URL", ("database", "url"), "str"),
+)
+
+_TRUE = {"1", "true", "yes", "on"}
+_FALSE = {"0", "false", "no", "off"}
+
+
+def _parse_env_value(name: str, value: str, kind: str):
+    if kind == "bool":
+        normalised = value.strip().casefold()
+        if normalised in _TRUE:
+            return True
+        if normalised in _FALSE:
+            return False
+        raise ValueError(
+            f"{name}={value!r} is not a boolean. Use true or false."
+        )
+    if kind == "csv":
+        return [part.strip() for part in value.split(",") if part.strip()]
+    return value.strip()
+
+
+def _apply_env_overrides(raw: dict) -> None:
+    """Overlay operator-specific values from the environment onto the YAML.
+
+    This exists so config.yaml can be committed to a public repository without
+    carrying anyone's Drive file ID, real name, or protected-sender addresses.
+    An unset variable changes nothing, so the YAML remains the single source of
+    defaults; .env only ever overrides.
+
+    Note that an explicitly empty value (DAILY_SENDER_NAME=) is treated as unset
+    rather than as "override with empty" - blanking a required field from the
+    environment is far more likely to be an editing accident than an intent.
+    """
+    for name, path, kind in ENV_OVERRIDES:
+        value = os.getenv(name)
+        if value is None or not value.strip():
+            continue
+
+        parsed = _parse_env_value(name, value, kind)
+        target = raw
+        for part in path[:-1]:
+            existing = target.get(part)
+            if not isinstance(existing, dict):
+                existing = {}
+                target[part] = existing
+            target = existing
+        target[path[-1]] = parsed
 
 
 @lru_cache(maxsize=1)

@@ -21,6 +21,16 @@ def project(tmp_path, monkeypatch) -> Path:
     config = yaml.safe_load(source.read_text(encoding="utf-8"))
     config["database"]["url"] = f"sqlite:///{(tmp_path / 'test.db').as_posix()}"
     config["logging"]["file"] = str(tmp_path / "log.jsonl")
+
+    # Pin everything these tests assert on. The repository's config.yaml is an
+    # operator-edited file - once someone sets dry_run: false and fills in their
+    # own drive_file_id and sender_name, inheriting those values silently
+    # changes what the preflight table says and breaks tests that have nothing
+    # to do with their edit.
+    config["dry_run"] = True
+    config["occasion"]["drive_file_id"] = ""
+    config["occasion"]["sender_name"] = ""
+
     (tmp_path / "config.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
 
     # Keep the real .env out of the test run.

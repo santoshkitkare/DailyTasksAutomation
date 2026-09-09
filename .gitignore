@@ -29,3 +29,9 @@ Thumbs.db
 .DS_Store
 .idea/
 .vscode/
+
+# Generated contacts workbooks. These contain real names and addresses -
+# scripts/make_test_contacts.py writes the operator's own email into every row.
+test_contacts.xlsx
+*_contacts.xlsx
+contacts*.xlsx

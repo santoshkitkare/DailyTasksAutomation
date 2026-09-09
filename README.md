@@ -69,6 +69,24 @@ Fill in `ANTHROPIC_API_KEY` and `GEMINI_API_KEY`. Optionally set
 .venv\Scripts\python.exe -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
+`.env` also holds every setting that identifies **you**, so that `config.yaml`
+can stay a committable template:
+
+| Variable | Overrides | Notes |
+|---|---|---|
+| `DAILY_DRY_RUN` | `dry_run` | `false` acts for real. Ships `true`. |
+| `DAILY_DRIVE_FILE_ID` | `occasion.drive_file_id` | Your contacts workbook. |
+| `DAILY_SENDER_NAME` | `occasion.sender_name` | Signs greetings. |
+| `DAILY_NOTIFY_RECIPIENT` | `notifications.recipient` | Blank = your own inbox. |
+| `DAILY_PROTECTED_SENDERS` | `gmail.protected_senders` | Comma-separated. Real bank/family domains belong here. |
+| `DAILY_TIMEZONE` | `scheduler.timezone` | Optional. |
+| `DAILY_DATABASE_URL` | `database.url` | Optional. |
+
+An unset **or empty** variable falls back to the `config.yaml` default, so a
+stray blank line cannot silently clear a setting. `DAILY_DRY_RUN` is the one
+exception to leniency: an unparseable value raises rather than defaulting,
+because guessing there could turn a dry run into a live one.
+
 ### 4. Contacts workbook
 
 Put an `.xlsx` file in Google Drive with a worksheet named `Contacts`:
@@ -83,9 +101,10 @@ greeting's tone — `Family`, `Close Friend`, `Friend`, `Colleague`, `Client`.
 Anything else, or blank, falls back to warm-but-professional.
 
 Copy the file ID out of the share URL — the part between `/d/` and `/edit` —
-into `occasion.drive_file_id` in `config.yaml`, and set `occasion.sender_name`
-to the name greetings should be signed with. **Greetings will not send while
-`sender_name` is empty.**
+into **`DAILY_DRIVE_FILE_ID`** in `.env`, and set **`DAILY_SENDER_NAME`** to the
+name greetings should be signed with. **Greetings will not send while the sender
+name is empty.** Both live in `.env` rather than `config.yaml` so they never
+reach the repository.
 
 ### 5. Authorise and verify
 
@@ -119,9 +138,9 @@ Reports are written to `data/reports/` regardless of whether the email is sent.
 1. Run in dry-run mode for two or three days.
 2. Read the reports. Check the "would be labeled" list against your own
    judgement.
-3. Tune `gmail.auto_label_threshold` and add any senders you care about to
-   `gmail.protected_senders`.
-4. Set `dry_run: false` in `config.yaml`.
+3. Tune `gmail.auto_label_threshold` in `config.yaml`, and add any senders you
+   care about to `DAILY_PROTECTED_SENDERS` in `.env`.
+4. Set `DAILY_DRY_RUN=false` in `.env`.
 5. Run once by hand and check Gmail before scheduling it.
 
 ### Undoing a labeling
@@ -152,13 +171,14 @@ missed start. Pass `-At 07:30` for a different time, or `-Unregister` to remove.
 
 | Key | Meaning |
 |---|---|
-| `dry_run` | Global kill-switch for every outbound side effect. |
+| `dry_run` | Global kill-switch for every outbound side effect. Override with `DAILY_DRY_RUN`. |
 | `gmail.auto_label_threshold` | Minimum model confidence before `ToDelete` can be applied. |
 | `gmail.auto_label_allowed_categories` | The only categories eligible for labeling, whatever the confidence. |
-| `gmail.protected_senders` | Substrings matched against `From`; a match vetoes all automation. |
+| `gmail.protected_senders` | Substrings matched against `From`; a match vetoes all automation. Set real values via `DAILY_PROTECTED_SENDERS`. |
 | `gmail.max_emails_per_run` | Cost guard. The run warns when it hits this. |
 | `occasion.send_enabled` | Turn greetings off without disabling the whole workflow. |
-| `ai.classification_model` | Defaults to `claude-opus-5`. |
+| `ai.classification_model` | `claude-haiku-4-5`. Triage is rubric-following, and the policy engine vetoes a wrong verdict. |
+| `ai.content_model` | `claude-opus-5`. Greetings are low-volume and go to real people under your name. |
 
 ---
 
